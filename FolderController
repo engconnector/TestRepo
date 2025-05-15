@@ -1,0 +1,205 @@
+package com.concentricai.krawler.application.controller;
+
+import com.concentricai.krawler.application.service.FolderService;
+import com.concentricai.krawler.application.utils.AccountOverride;
+import com.concentricai.krawler.core.commonapi.resource.FileOperationRequest;
+import com.concentricai.krawler.core.commonapi.resource.FileOperationResponse;
+import com.concentricai.krawler.core.commonapi.resource.PermissionDTO;
+import com.concentricai.krawler.core.commonapi.resource.folder.RulesDTO;
+import com.concentricai.krawler.core.commonapi.resource.message.MessageDTO;
+import com.concentricai.krawler.core.commonapi.resource.ResourceDTO;
+import com.concentricai.krawler.core.commonapi.response.CommonApiResponseDTO;
+import com.concentricai.krawler.core.constants.ConfigConstants;
+import feign.Param;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/account/{accountId}")
+@Slf4j
+public class FolderController {
+    @Autowired
+    private FolderService folderService;
+
+    @GetMapping("/folder/{folderId}/content")
+    public CommonApiResponseDTO<List<ResourceDTO>> getFolderContent(@PathVariable("accountId") String accountId,
+                                                                    @PathVariable("folderId") String folderId,
+                                                                    @Param("nextPage") String nextPage,
+                                                                    @RequestHeader(value = "userId", required = false) String userId,
+                                                                    @RequestHeader(value = "requestId", required = false) String requestId,
+                                                                    @RequestParam(value = "searchTerm", required = false) String searchTerm) throws HttpRequestMethodNotSupportedException {
+        String overriddenAccountId = AccountOverride.overrideWestwoodAccountId(accountId);
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, overriddenAccountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        MDC.put(ConfigConstants.SEARCH_TERM, searchTerm);
+        CommonApiResponseDTO<List<ResourceDTO>> response = folderService.getFolderContent(folderId, nextPage);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/folder/{folderId}")
+    public CommonApiResponseDTO<ResourceDTO> getFolderMetadata(@PathVariable("accountId") String accountId, @PathVariable("folderId") String folderId, @RequestHeader(value = "userId", required = false) String userId, @RequestHeader(value = "requestId", required = false) String requestId) throws HttpRequestMethodNotSupportedException {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<ResourceDTO> response = folderService.getFolderMetadata(folderId);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/folder/{folderId}/permissions")
+    public CommonApiResponseDTO<Object> getFolderPermissions(@PathVariable("accountId") String accountId, @PathVariable("folderId") String folderId, @RequestHeader(value = "userId", required = false) String userId, @Param("nextPage") String nextPage, @RequestHeader(value = "requestId", required = false) String requestId) {
+        String overriddenAccountId = AccountOverride.overrideWestwoodAccountId(accountId);
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, overriddenAccountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<Object> response = folderService.getFolderPermissions(folderId, nextPage);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @DeleteMapping("/folder/{folderId}/permissions/{permissionId}")
+    public CommonApiResponseDTO<Object> deleteFolderPermissions(@PathVariable("accountId") String accountId, @PathVariable("folderId") String folderId, @PathVariable("permissionId") String permissionId, @RequestHeader(value = "userId", required = false) String userId, @RequestHeader(value = "requestId", required = false) String requestId) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<Object> response = folderService.deleteFolderPermissions(folderId, permissionId);
+        return response;
+    }
+
+
+    @PostMapping("/folder/{folderId}/permissions")
+    public CommonApiResponseDTO<Object> addFolderPermissions(@PathVariable("accountId") String accountId, @PathVariable("folderId") String folderId, @RequestBody PermissionDTO permissionDTO, @RequestHeader(value = "userId", required = false) String userId, @RequestHeader(value = "requestId", required = false) String requestId) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<Object> response = folderService.addFolderPermission(folderId, permissionDTO);
+        return response;
+    }
+
+    @GetMapping("/folder/{folderId}/messages")
+    public CommonApiResponseDTO<List<MessageDTO>> getFolderMessages(@PathVariable("accountId") String accountId,
+                                                                    @PathVariable("folderId") String folderId,
+                                                                    @RequestHeader(value = "userId", required = false) String userId,
+                                                                    @RequestHeader(value = "requestId", required = false) String requestId,
+                                                                    @Param("after") String after,
+                                                                    @Param("before") String before,
+                                                                    @Param("nextPage") String nextPage) throws HttpRequestMethodNotSupportedException {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<List<MessageDTO>> response = folderService.getFolderMessages(folderId, after, before, nextPage);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/folder/{folderId}/messages/{messageId}/attachments")
+    public CommonApiResponseDTO<List<ResourceDTO>> getMessageAttachments(@PathVariable("accountId") String accountId,
+                                                                         @PathVariable("folderId") String folderId,
+                                                                         @PathVariable("messageId") String messageId,
+                                                                         @RequestHeader(value = "userId", required = false) String userId,
+                                                                         @RequestHeader(value = "requestId", required = false) String requestId,
+                                                                         @Param("nextPage") String nextPage) throws HttpRequestMethodNotSupportedException {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<List<ResourceDTO>> response = folderService.getMessageAttachments(folderId, messageId, nextPage);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/folder/{folderId}/messages/{messageId}/attachments/{attachmentId}")
+    public CommonApiResponseDTO<ResourceDTO> getMessageAttachmentContent(@PathVariable("accountId") String accountId,
+                                                                         @PathVariable("folderId") String folderId,
+                                                                         @PathVariable("messageId") String messageId,
+                                                                         @PathVariable("attachmentId") String attachmentId,
+                                                                         @RequestHeader(value = "userId", required = false) String userId,
+                                                                         @RequestHeader(value = "requestId", required = false) String requestId,
+                                                                         @Param("nextPage") String nextPage) throws HttpRequestMethodNotSupportedException {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<ResourceDTO> response = folderService.getMessageAttachmentContent(folderId, messageId, attachmentId, nextPage);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/folder/{folderId}/rules")
+    public CommonApiResponseDTO<List<RulesDTO>> getRules(@PathVariable("accountId") String accountId,
+                                                         @PathVariable("folderId") String folderId,
+                                                         @RequestHeader(value = "requestId", required = false) String requestId,
+                                                         @RequestHeader(value = "userId", required = false) String userId,
+                                                         @Param("nextPage") String nextPage) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<List<RulesDTO>> response = folderService.getRules(folderId, nextPage);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @PostMapping(value = "/folder/create/{parentFolderId}/{folderName}")
+    public CommonApiResponseDTO<FileOperationResponse> create(@PathVariable("accountId") String accountId,
+                                                              @RequestHeader(value = "requestId", required = false) String requestId,
+                                                              @RequestHeader(value = "userId", required = false) String userId,
+                                                              @PathVariable("parentFolderId") String parentFolderId,
+                                                              @PathVariable("folderName") String folderName) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<FileOperationResponse> response = folderService.create(FileOperationRequest.builder()
+                .destinationId(parentFolderId).finalName(folderName).build());
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/folder/{folderId}/search/{resourceName}")
+    public CommonApiResponseDTO<List<ResourceDTO>> search(@PathVariable("accountId") String accountId,
+                                                          @PathVariable("folderId") String folderId,
+                                                          @PathVariable("resourceName") String resourceName,
+                                                          @RequestParam(value = "isFolder", required = false,
+                                                                  defaultValue = "false") boolean isFolder,
+                                                          @RequestHeader(value = "userId", required = false)
+                                                              String userId,
+                                                          @RequestHeader(value = "requestId", required = false)
+                                                              String requestId,
+                                                          @RequestParam(value = "searchType", required = false)
+                                                              String searchType) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<List<ResourceDTO>> response =
+                folderService.search(folderId,resourceName, isFolder, searchType);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/search/{resourceName}")
+    public CommonApiResponseDTO<List<ResourceDTO>> search(@PathVariable("accountId") String accountId,
+                                                          @PathVariable("resourceName") String resourceName,
+                                                          @RequestParam(value = "isFolder", required = false,
+                                                                  defaultValue = "false") boolean isFolder,
+                                                          @RequestHeader(value = "userId", required = false)
+                                                          String userId,
+                                                          @RequestHeader(value = "requestId", required = false)
+                                                          String requestId,
+                                                          @RequestParam(value = "searchType", required = false)
+                                                          String searchType,
+                                                          @RequestParam(value = "nextPage", required = false)
+                                                              String nextPage
+                                                          ) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.USER_ID_KEY, userId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<List<ResourceDTO>> response =
+                folderService.search(resourceName, isFolder, searchType, nextPage);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+}
