@@ -1,0 +1,124 @@
+package com.concentricai.krawler.application.controller;
+
+import com.concentricai.krawler.application.service.UserService;
+import com.concentricai.krawler.core.commonapi.response.CommonApiResponseDTO;
+import com.concentricai.krawler.core.commonapi.user.UserDTO;
+import com.concentricai.krawler.core.constants.ConfigConstants;
+import com.fasterxml.jackson.databind.JsonNode;
+import feign.Param;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/account/{accountId}")
+@Slf4j
+public class UserController {
+    @Autowired
+    UserService userService;
+
+    @GetMapping("/users")
+    public CommonApiResponseDTO<List<UserDTO>> getAllUsers(@PathVariable("accountId") String accountId,
+                                                           @Param("nextPage") String nextPage,
+                                                           @RequestHeader(value = "requestId", required = false) String requestId,
+                                                           @RequestHeader(value = "providerId", required = false) String providerId,
+                                                           @RequestParam(value = "searchTerm", required = false) String searchTerm,
+                                                           @RequestParam(value = "customFields", required = false, defaultValue = "") String customFields) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        MDC.put(ConfigConstants.SEARCH_TERM, searchTerm);
+        MDC.put(ConfigConstants.PROVIDER_ID, providerId);
+        MDC.put(ConfigConstants.CUSTOM_FIELDS, customFields);
+        log.debug("Custom Fields in user controller : ", customFields);
+        CommonApiResponseDTO<List<UserDTO>> response = userService.getAllUsers(nextPage);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/customers")
+    public CommonApiResponseDTO<List<UserDTO>> getAllCustomers(@PathVariable("accountId") String accountId,
+                                                           @Param("nextPage") String nextPage,
+                                                           @RequestHeader(value = "requestId", required = false) String requestId) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        log.debug("Getting customers information for account {}", accountId);
+        CommonApiResponseDTO<List<UserDTO>> response = userService.getAllCustomers(nextPage);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/users/{userId}")
+    public CommonApiResponseDTO<UserDTO> getUserById(@PathVariable("accountId") String accountId,
+                                                     @PathVariable("userId") String userId,
+                                                     @RequestHeader(value = "requestId", required = false) String requestId,
+                                                     @RequestParam(value = "customFields", required = false, defaultValue = "") String customFields) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        MDC.put(ConfigConstants.CUSTOM_FIELDS, customFields);
+        CommonApiResponseDTO<UserDTO> response = userService.getUserById(userId);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/users/{userId}/manager")
+    public CommonApiResponseDTO<UserDTO> getUserManager(@PathVariable("accountId") String accountId, @PathVariable("userId") String userId, @RequestHeader(value = "requestId", required = false) String requestId) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<UserDTO> response = userService.getUserManager(userId);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/users/{userId}/membership")
+    public CommonApiResponseDTO<List<UserDTO>> getUserMembership(@PathVariable("accountId") String accountId,
+                                                                 @PathVariable("userId") String userId,
+                                                                 @Param("nextPage") String nextPage,
+                                                                 @RequestHeader(value = "requestId", required = false) String requestId,
+                                                                 @RequestParam(value = "searchTerm", required = false) String searchTerm   ) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        MDC.put(ConfigConstants.SEARCH_TERM, searchTerm);
+        CommonApiResponseDTO<List<UserDTO>> response = userService.getUserMembership(nextPage, userId);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/users/{userId}/permissions")
+    public CommonApiResponseDTO<Object> getPermissions(@PathVariable("accountId") String accountId,
+                                                       @PathVariable("userId") String userId,
+                                                       @Param("nextPage") String nextPage, @RequestHeader(value = "requestId", required = false) String requestId) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<Object> response = userService.getPermissions(nextPage, userId);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @GetMapping("/users/{userId}/permissions/{permissionId}")
+    public CommonApiResponseDTO<Object> getPermission(@PathVariable("accountId") String accountId,
+                                                      @PathVariable("userId") String userId,
+                                                      @PathVariable("permissionId") String permissionId,
+                                                      @Param("nextPage") String nextPage, @RequestHeader(value = "requestId", required = false) String requestId) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<Object> response = userService.getPermission(nextPage, userId, permissionId);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+
+    @PostMapping("/users/{userId}/sendMail")
+    public CommonApiResponseDTO<String> sendMail(@PathVariable("accountId") String accountId,
+                                               @PathVariable("userId") String userId,
+                                               @RequestBody JsonNode message,
+                                               @RequestHeader(value = "requestId", required = false) String requestId) {
+        MDC.put(ConfigConstants.ACCOUNT_ID_KEY, accountId);
+        MDC.put(ConfigConstants.REQUEST_ID, requestId);
+        CommonApiResponseDTO<String> response = userService.sendMail(userId, message);
+        response.setTraceId(MDC.get(ConfigConstants.TRACE_ID_KEY));
+        return response;
+    }
+}
